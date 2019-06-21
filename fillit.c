@@ -6,119 +6,180 @@
 /*   By: abarnett <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/06/07 12:48:31 by abarnett          #+#    #+#             */
-/*   Updated: 2018/06/22 12:25:04 by abarnett         ###   ########.fr       */
+/*   Updated: 2019/06/20 20:22:18 by rreedy           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "libft.h"
 #include "fillit.h"
+#include "ft_str.h"
+#include "ft_mem.h"
+#include "ft_put.h"
+#include "ft_list.h"
 
-void	print_map(t_list *list, int size)
+/*
+**	The print_map() function allocates a char pointer called s, which is used
+**	hold the map with the letters of the tetromino pieces, and then will be
+**	printed by ft_putendl(). This function first has a while loop to place the
+**	newlines into the string, and then the main while loop, which loops through
+**	the linked list	and places characters on the board using bit
+**	shifting on the tetromino piece starting at its x and y coordinates.
+*/
+
+static void		print_map(t_list *tetrominos, int map_size)
 {
 	char	*s;
 	int		row;
 	int		i;
 
-	s = ft_strinit(sizeof(char) * size * (size + 1), '.');
-	row = size;
-	s[((size + 1) * row) - 1] = '\0';
+	s = ft_strinit('.', map_size * (map_size + 1));
+	row = map_size;
+	s[((map_size + 1) * row) - 1] = '\0';
 	while (--row)
-		s[((size + 1) * row) - 1] = '\n';
-	while (list->content)
+		s[((map_size + 1) * row) - 1] = '\n';
+	while (tetrominos->content)
 	{
 		row = 0;
-		i = 16;
+		i = MINO_SIZE;
 		while (i--)
 		{
-			if ((BITS(list) >> i) & 0x0001)
-				s[(Y(list) + row) * (size + 1) + X(list) +
-				((15 - i) % 4)] = CHAR(list);
-			if ((16 - i) % 4 == 0)
+			if ((MINO(tetrominos) >> i) & 0x0001)
+				s[(Y(tetrominos) + row) * (map_size + 1) + X(tetrominos) +
+				(((MINO_SIZE - 1) - i) % 4)] = C(tetrominos);
+			if ((MINO_SIZE - i) % 4 == 0)
 				++row;
 		}
-		list = list->next;
+		tetrominos = tetrominos->next;
 	}
 	ft_putendl(s);
 }
 
-void	place_mino(uint16_t map[], t_list *mino)
-{
-	int i;
+/*
+**	The place_mino() function first moves the map pointer (temporarily) to the
+**	first row that the tetromino piece should be placed. It then loops
+**	through the tetromino piece row by row and places that row on the map
+**	using the bitwise xor (^) operator. This function can also unplace pieces
+**	by calling it again, which is super convenient for backtracking.
+**
+**	(for more information on the macros used, see the fillit.h file)
+*/
 
-	i = -1;
-	map += Y(mino);
-	while (++i < 4)
-		*map++ ^= R(i, mino) >> X(mino);
+static void		place_mino(uint16_t map[], t_list *mino)
+{
+	int row;
+
+	row = 0;
+	map = map + Y(mino);
+	while (row < 4)
+	{
+		*map = *map ^ ROW(row, mino) >> X(mino);
+		++row;
+		++map;
+	}
 }
 
-int		find_spot(uint16_t map[], int size, t_list *mino, int row)
+/*
+**	The find_spot() function uses macros to easily isolate sections of the
+**	board, and goes through various checks to see if/where the given tetromino
+**	can fit. This function recursively checks the tetromino piece one row at a
+**	time, using bitsize operations to ensure that there is no overlap. This
+**	function will set the x and y variables inside of the t_mino struct for a
+**	particular piece.
+**
+**	(for more information on the macros used, see the fillit.h file)
+*/
+
+static int		find_spot(uint16_t map[], int map_size, t_list *mino, int row)
 {
-	if (!map || (((Y(mino) + row) >= size) && (R(row, mino) > 0)))
+	if (!map || (((Y(mino) + row) >= map_size) && (ROW(row, mino) > 0)))
 		return (-1);
-	if (LAST(mino) == CORD(mino, size))
+	if (LAST(mino) == CORD(mino, map_size))
 		++X(mino);
-	if (X(mino) >= (size - 3) &&
-		(BITS(mino) & (0x1111 << ((X(mino) - (size - 3))))))
+	if (X(mino) >= (map_size - 3) &&
+		(MINO(mino) & (0x1111 << ((X(mino) - (map_size - 3))))))
 	{
 		++Y(mino);
 		X(mino) = 0;
-		return (find_spot(map, size, mino, 0));
+		return (find_spot(map, map_size, mino, 0));
 	}
 	if (row == 0)
 	{
-		if (XOROR(*(map + Y(mino)), (R(row, mino) >> X(mino))))
-			if (find_spot(map + 1, size, mino, row + 1))
-				return (find_spot(map + 1, size, mino, row + 1));
+		if (XOROR(*(map + Y(mino)), (ROW(row, mino) >> X(mino))))
+			if (find_spot(map + 1, map_size, mino, row + 1))
+				return (find_spot(map + 1, map_size, mino, row + 1));
 		++X(mino);
-		return (find_spot(map, size, mino, row));
+		return (find_spot(map, map_size, mino, row));
 	}
-	if (row < 3 && XOROR(*(map + Y(mino)), (R(row, mino) >> X(mino))))
-		return (find_spot(map + 1, size, mino, row + 1));
+	if (row < 3 && XOROR(*(map + Y(mino)), (ROW(row, mino) >> X(mino))))
+		return (find_spot(map + 1, map_size, mino, row + 1));
 	else
-		return (XOROR(*(map + Y(mino)), (R(row, mino) >> X(mino))));
+		return (XOROR(*(map + Y(mino)), (ROW(row, mino) >> X(mino))));
 }
 
-int		fill_map(uint16_t map[], int size, t_list *cur)
-{
-	int	fit;
+/*
+**	The fill_map() function is a recursive backtracking algorithm. It attempts
+**	to find a spot for each piece and places that piece in the position
+**	found. It will then call the function on the next piece and try to find a
+**	place for it. If fill_map() with the next piece returns 0, meaning that it
+**	couldn't find a spot for it, the current piece is unplaced and moved to the
+**	first open spot it can find. fill_map() then tries again with the next
+**	piece. This will recursively handle placing all the pieces, and once the
+**	board is complete it will return 1 all the way through the stack and
+**	fill_map() will return to map_main().
+**
+**	NOTE: The place_mino() function uses the bitwise operator xor (^) to place
+**	pieces on the board, so by calling it a second time with the same
+**	parameters, it will act as an UNplace function as well.
+*/
 
-	if (!cur->content)
+static int		fill_map(uint16_t map[], int map_size, t_list *tetrominos)
+{
+	int		fit;
+
+	if (!tetrominos->content)
 		return (1);
-	LAST(cur) = -1;
-	X(cur) = 0;
-	Y(cur) = 0;
-	fit = find_spot(map, size, cur, 0);
+	LAST(tetrominos) = -1;
+	X(tetrominos) = 0;
+	Y(tetrominos) = 0;
+	fit = find_spot(map, map_size, tetrominos, 0);
 	while (fit == 1)
 	{
-		LAST(cur) = CORD(cur, size);
-		place_mino(map, cur);
-		if (fill_map(map, size, cur->next))
+		LAST(tetrominos) = CORD(tetrominos, map_size);
+		place_mino(map, tetrominos);
+		if (fill_map(map, map_size, tetrominos->next))
 			return (1);
-		place_mino(map, cur);
-		fit = find_spot(map, size, cur, 0);
+		place_mino(map, tetrominos);
+		fit = find_spot(map, map_size, tetrominos, 0);
 	}
 	return (0);
 }
 
-void	map_main(t_list *head)
-{
-	uint16_t	map[16];
-	int			count;
-	int			size;
+/*
+**	The map_main() function finds the smallest reasonable board size based on
+**	the number of tetrominos in the linked list, creates a board of that size
+**	and then calls the backtracking algorithm fill_map(). If it sucessfully
+**	places all the pieces then it prints the board, or else it prints error
+*/
 
-	ft_bzero(map, sizeof(uint16_t) * 16);
-	count = ft_lstlen(head);
-	size = 2;
-	while (size * size < count * 4)
-		++size;
-	while (size <= 16)
+void			map_main(t_list *tetrominos)
+{
+	uint16_t	map[MAX_BOARD_SIZE];
+	int			count;
+	int			map_size;
+
+	ft_bzero(map, sizeof(uint16_t) * MAX_BOARD_SIZE);
+	count = ft_lstlen(tetrominos);
+	map_size = 2;
+	while (map_size * map_size < count * 4)
+		++map_size;
+	while (map_size <= MAX_BOARD_SIZE)
 	{
-		if (!fill_map(map, size, head))
-			++size;
+		if (!fill_map(map, map_size, tetrominos))
+			++map_size;
 		else
 			break ;
 	}
-	if (size > 16)
+	if (map_size > MAX_BOARD_SIZE)
 		ft_putendl("error");
-	print_map(head, size);
+	else
+		print_map(tetrominos, map_size);
 }
