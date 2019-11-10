@@ -11,7 +11,7 @@ This project uses [my 42 library](https://github.com/mint42/lib), which has alre
 usage: ./fillit file
 ```
 
-The file referenced is the input file for the program, consisting of 1 - 26 tetromino pieces separated by a newline. These pieces, upon being validated, will be assigned a letter A - Z, to represent them when the square is printed.
+The file referenced is the input file for the program. It can have up to 26 tetromino pieces separated by a newline. These pieces, upon being validated, will be assigned a letter A - Z to represent them when the square is printed.
 
 Example:
 
@@ -56,7 +56,7 @@ First, the ft_lstlen() function differs in that, for Fillit, it considers the a 
 
 Also, not all the /lib modules are compiled in this project. This is to keep the project small, only using the modules that were necessary for the code to run.
 
-Here is a list of valid tetromino pieces:
+Here is a list of all valid tetromino pieces:
 
 ```
 #...	####
