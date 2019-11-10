@@ -5,7 +5,7 @@ A tetromino is a 4-block geometric figure, popularized by the game Tetris.
 
 ## Getting Started
 
-This project uses [my 42 library](https://github.com/mint42/lib), which has already been included in this repository for ease of use. To set up this project, clone the fillit repository and type the 'make' command into the terminal. The Makefile will first create the library, and then create the executable file called 'fillit'.
+This project uses [my 42 library](https://github.com/mint42/lib), which has already been included in this repository for ease of use. To set up this project, run `git clone https://github.com/mint42/fillit` in the folder of your choice. Then run the `make` command in the root of the repository. The Makefile will first create the library, and then create the executable file called `fillit`.
 
 ```
 usage: ./fillit file
